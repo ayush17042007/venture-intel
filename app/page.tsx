@@ -4,11 +4,10 @@ import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { AnimatedBackground } from '@/components/animated-background'
 
 const IntelligenceGlobe = dynamic(
   () => import('@/components/intelligence-globe').then((mod) => mod.IntelligenceGlobe),
-  { ssr: false, loading: () => <AnimatedBackground /> }
+  { ssr: false }
 )
 import { AIActivityTimeline } from '@/components/ai-activity-timeline'
 import { ResearchSection } from '@/components/research-section'
