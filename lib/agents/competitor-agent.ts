@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentState, Source } from './types';
-import { fastLLM } from './llm';
+import { competitorLLM } from './llm';
 import { performSearch } from './tavily-client';
 
 const competitorProfileSchema = z.object({
@@ -89,7 +89,7 @@ Content: ${res.content.slice(0, 500)}
     contextString = "No internet search context available. Fall back to your internal knowledge to identify likely competitors. Provide 'Unknown' for exact websites and recent funding if you are not sure.";
   }
 
-  const modelWithStructure = fastLLM.withStructuredOutput(competitorSchema, { name: "competitors" });
+  const modelWithStructure = competitorLLM.withStructuredOutput(competitorSchema, { name: "competitors" });
   
   const prompt = `You are a Competitive Intelligence Agent for a venture capital firm.
 

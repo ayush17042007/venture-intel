@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentState, Source } from './types';
-import { fastLLM } from './llm';
+import { researchLLM } from './llm';
 import { performSearch } from './tavily-client';
 
 const researchSchema = z.object({
@@ -56,7 +56,7 @@ rawSources.forEach((res) => {
     contextString = "No internet search context available. Fall back to your internal knowledge to estimate the market size, trends, and target audience. You do not need to cite sources since search failed.";
   }
 
-  const modelWithStructure = fastLLM.withStructuredOutput(researchSchema, { name: "marketResearch" });
+  const modelWithStructure = researchLLM.withStructuredOutput(researchSchema, { name: "marketResearch" });
   
   const prompt = `You are an expert Research Analyst for a venture capital firm.
 Conduct comprehensive market research for the following startup idea:

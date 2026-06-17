@@ -1,5 +1,5 @@
 import { AgentState } from './types';
-import { fastLLM } from './llm';
+import { analysisLLM } from './llm';
 
 export async function analysisAgent(
 state: AgentState
@@ -46,7 +46,7 @@ Rules:
   `;
 
   try {
-  const response = await fastLLM.invoke(prompt);
+  const response = await analysisLLM.invoke(prompt);
 
   let content = String(response.content).trim();
 
