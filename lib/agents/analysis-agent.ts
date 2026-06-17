@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentState } from './types';
-import { smartLLM } from './llm';
+import { fastLLM } from './llm';
 
 const analysisSchema = z.object({
   swot: z.object({
@@ -15,7 +15,7 @@ const analysisSchema = z.object({
 export async function analysisAgent(state: AgentState): Promise<Partial<AgentState>> {
   console.log(`[Analysis Agent] Performing core analysis for: ${state.startupIdea}`);
   
-  const modelWithStructure = smartLLM.withStructuredOutput(analysisSchema, { name: "swot" });
+  const modelWithStructure = fastLLM.withStructuredOutput(analysisSchema, { name: "swot" });
   
   const prompt = `You are a Principal Analyst at a venture capital firm.
 Perform a SWOT analysis and risk assessment for the following startup idea:
