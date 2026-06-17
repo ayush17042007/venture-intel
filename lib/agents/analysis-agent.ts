@@ -1,50 +1,86 @@
-import { z } from "zod";
 import { AgentState } from './types';
 import { fastLLM } from './llm';
 
-const analysisSchema = z.object({
-  swot: z.object({
-    strengths: z.array(z.string()),
-    weaknesses: z.array(z.string()),
-    opportunities: z.array(z.string()),
-    threats: z.array(z.string()),
-  }),
-  risks: z.array(z.string()).describe("Key execution, market, or technical risks"),
-});
+export async function analysisAgent(
+state: AgentState
+): Promise<Partial<AgentState>> {
+console.log(
+`[Analysis Agent] Performing core analysis for: ${state.startupIdea}`
+);
 
-export async function analysisAgent(state: AgentState): Promise<Partial<AgentState>> {
-  console.log(`[Analysis Agent] Performing core analysis for: ${state.startupIdea}`);
-  
-  const modelWithStructure = fastLLM.withStructuredOutput(analysisSchema, { name: "swot" });
-  
-  const prompt = `You are a Principal Analyst at a venture capital firm.
-Perform a SWOT analysis and risk assessment for the following startup idea:
-"${state.startupIdea}"
+const prompt = `
+You are a Principal Analyst at a venture capital firm.
 
-Context:
-Research: ${JSON.stringify(state.marketResearch)}
-Competitors: ${JSON.stringify(state.competitors)}`;
+Perform a SWOT analysis and risk assessment.
+
+Return ONLY valid JSON.
+
+{
+"strengths": [],
+"weaknesses": [],
+"opportunities": [],
+"threats": [],
+"risks": []
+}
+
+Startup Idea:
+${state.startupIdea}
+
+Market Research:
+${JSON.stringify(state.marketResearch)}
+
+Competitors:
+${JSON.stringify(
+state.competitors?.directCompetitors?.map((c: any) => ({
+name: c.companyName,
+description: c.description,
+})) || []
+)}
+
+Rules:
+
+* Return valid JSON only.
+* Do not wrap in markdown.
+* Provide 4-6 items for each category.
+* Keep each item concise.
+  `;
 
   try {
-    const response = await modelWithStructure.invoke(prompt);
-    
-    return {
-      swot: response,
-      status: 'generating_report'
-    };
+  const response = await fastLLM.invoke(prompt);
+
+  let content = String(response.content).trim();
+
+  // Remove accidental markdown fences if model adds them
+  content = content
+  .replace(/^`json\s*/i, '')
+      .replace(/^`\s*/i, '')
+  .replace(/\s*```$/i, '');
+
+  const parsed = JSON.parse(content);
+
+  return {
+  swot: {
+  swot: {
+  strengths: parsed.strengths || [],
+  weaknesses: parsed.weaknesses || [],
+  opportunities: parsed.opportunities || [],
+  threats: parsed.threats || [],
+  },
+  risks: parsed.risks || [],
+  },
+  status: 'generating_report',
+  };
   } catch (error: any) {
-    let errorMessage = "Request failed";
-    const msg = error.message?.toLowerCase() || "";
-    if (msg.includes('rate limit') || error.status === 429) {
-      errorMessage = "Rate limit exceeded";
-    } else if (msg.includes('api key') || error.status === 401 || msg.includes('authentication')) {
-      errorMessage = "Invalid API key";
-    } else if (msg.includes('network') || error.code === 'ECONNREFUSED') {
-      errorMessage = "Network failure";
-    } else {
-      errorMessage = error.message || errorMessage;
-    }
-    console.error(`[Groq] ${errorMessage}`);
-    return { error: `[Groq] ${errorMessage}`, status: 'error' };
+  console.error(
+  '[Analysis Agent Error]',
+  error
+  );
+
+  return {
+  error:
+  error?.message ||
+  'Failed to generate SWOT analysis',
+  status: 'error',
+  };
   }
-}
+  }

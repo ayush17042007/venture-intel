@@ -164,12 +164,9 @@ export default function Page() {
   }
 
   const showActionBar =
-    !isAnalyzing &&
-    hasAnalyzed &&
-    !!analysisData?.marketResearch &&
-    !!analysisData?.competitors &&
-    !!analysisData?.swot &&
-    !!analysisData?.report;
+  hasAnalyzed &&
+  !isAnalyzing &&
+  analysisData;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
