@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentState, Source } from './types';
-import { llm } from './llm';
+import { fastLLM } from './llm';
 import { performSearch } from './tavily-client';
 
 const competitorProfileSchema = z.object({
@@ -33,22 +33,68 @@ export async function competitorAgent(state: AgentState): Promise<Partial<AgentS
     
     const uniqueUrls = new Set<string>();
 
-    rawSources.forEach(res => {
-      if (!uniqueUrls.has(res.url)) {
-        uniqueUrls.add(res.url);
-        sources.push({ url: res.url, title: res.title, category: 'Competitor' });
-        contextString += `Source: ${res.url}\nTitle: ${res.title}\nContent: ${res.content}\n\n`;
-      }
+    const blockedDomains = [
+  "reddit.com",
+  "youtube.com",
+  "medium.com",
+  "quora.com",
+  "linkedin.com",
+  "facebook.com",
+  "twitter.com",
+  "x.com",
+];
+
+const blockedKeywords = [
+  "market size",
+  "market report",
+  "forecast",
+  "statistics",
+  "trends",
+  "guide",
+  "best",
+  "top 10",
+];
+
+rawSources.forEach((res) => {
+  const url = res.url.toLowerCase();
+  const title = res.title.toLowerCase();
+
+  if (blockedDomains.some((d) => url.includes(d))) {
+    return;
+  }
+
+  if (blockedKeywords.some((k) => title.includes(k))) {
+    return;
+  }
+
+  if (!uniqueUrls.has(res.url)) {
+    uniqueUrls.add(res.url);
+
+    sources.push({
+      url: res.url,
+      title: res.title,
+      category: "Competitor",
     });
+
+    contextString += `
+Source: ${res.url}
+Title: ${res.title}
+Content: ${res.content.slice(0, 500)}
+
+`;
+  }
+});
   } catch (e: any) {
     console.warn("[Competitor Agent] Tavily search failed, falling back to Gemini reasoning.", e.message || e);
     contextString = "No internet search context available. Fall back to your internal knowledge to identify likely competitors. Provide 'Unknown' for exact websites and recent funding if you are not sure.";
   }
 
-  const modelWithStructure = llm.withStructuredOutput(competitorSchema, { name: "competitors" });
+  const modelWithStructure = fastLLM.withStructuredOutput(competitorSchema, { name: "competitors" });
   
   const prompt = `You are a Competitive Intelligence Agent for a venture capital firm.
+
 Analyze the competitive landscape for the following startup idea:
+
 "${state.startupIdea}"
 
 Market Research Context:
@@ -57,10 +103,40 @@ ${JSON.stringify(state.marketResearch)}
 Real-time Search Context:
 ${contextString}
 
-Identify direct and indirect competitors using ONLY the Search Context above if available.
-Extract the companyName, website, description, funding, latestRound, recentActivity, and similarityScore.
-If funding or latest round cannot be verified, explicitly return: "Not publicly available".
-Determine a potential competitive advantage.`;
+IMPORTANT RULES:
+
+1. ONLY return actual companies or startups.
+2. NEVER return:
+   - articles
+   - blogs
+   - Reddit posts
+   - market reports
+   - research reports
+   - statistics pages
+   - news articles
+   - publications
+
+3. Every competitor must be a real company.
+4. Use ONLY the companies found in the search context.
+5. If funding cannot be verified:
+   "Not publicly available"
+6. If website cannot be verified:
+   "Unknown"
+
+Return:
+- 3-5 direct competitors
+- 2-4 indirect competitors
+- competitive advantage
+
+Extract:
+companyName
+website
+description
+funding
+latestRound
+recentActivity
+similarityScore
+`;
 
   try {
     const response = await modelWithStructure.invoke(prompt);

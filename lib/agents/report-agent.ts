@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentState } from './types';
-import { llm } from './llm';
+import { smartLLM } from './llm';
 
 const reportSchema = z.object({
   executiveSummary: z.string().describe("A compelling 2-3 paragraph executive summary"),
@@ -11,7 +11,7 @@ const reportSchema = z.object({
 export async function reportAgent(state: AgentState): Promise<Partial<AgentState>> {
   console.log(`[Report Agent] Generating final investor report for: ${state.startupIdea}`);
   
-  const modelWithStructure = llm.withStructuredOutput(reportSchema, { name: "report" });
+  const modelWithStructure = smartLLM.withStructuredOutput(reportSchema, { name: "report" });
   
   const prompt = `You are an Investment Partner at a top-tier venture capital firm.
 Write a final investment report and recommendation for this startup idea:

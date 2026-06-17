@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentState, Source } from './types';
-import { llm } from './llm';
+import { fastLLM } from './llm';
 import { performSearch } from './tavily-client';
 
 const researchSchema = z.object({
@@ -27,11 +27,27 @@ export async function researchAgent(state: AgentState): Promise<Partial<AgentSta
     // Deduplicate sources by URL (Requirement 1)
     const uniqueUrls = new Set<string>();
 
-    rawSources.forEach(res => {
+    let sourceCount = 0;
+
+rawSources.forEach((res) => {
+  if (sourceCount >= 10) {
+    return;
+  }
       if (!uniqueUrls.has(res.url)) {
         uniqueUrls.add(res.url);
+        sourceCount++;
+        const blockedDomains = [
+        "reddit.com",
+        "quora.com",
+        "youtube.com",
+      ];
         sources.push({ url: res.url, title: res.title, category: 'Research' });
-        contextString += `Source: ${res.url}\nTitle: ${res.title}\nContent: ${res.content}\n\n`;
+        contextString += `
+        Source: ${res.url}
+        Title: ${res.title}
+        Content: ${res.content.slice(0, 300)}
+
+`;
       }
     });
   } catch (e: any) {
@@ -40,7 +56,7 @@ export async function researchAgent(state: AgentState): Promise<Partial<AgentSta
     contextString = "No internet search context available. Fall back to your internal knowledge to estimate the market size, trends, and target audience. You do not need to cite sources since search failed.";
   }
 
-  const modelWithStructure = llm.withStructuredOutput(researchSchema, { name: "marketResearch" });
+  const modelWithStructure = fastLLM.withStructuredOutput(researchSchema, { name: "marketResearch" });
   
   const prompt = `You are an expert Research Analyst for a venture capital firm.
 Conduct comprehensive market research for the following startup idea:
