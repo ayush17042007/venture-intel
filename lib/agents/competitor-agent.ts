@@ -5,18 +5,24 @@ import { performSearch } from './tavily-client';
 
 const competitorProfileSchema = z.object({
   companyName: z.string(),
-  website: z.string().describe("Company website URL. Provide 'Unknown' if not found."),
+  website: z.string().optional().default("Unknown"),
   description: z.string(),
-  funding: z.string().describe("Total funding. If cannot be verified, return 'Not publicly available'."),
-  latestRound: z.string().describe("Latest funding round. If cannot be verified, return 'Not publicly available'."),
-  recentActivity: z.string().describe("Recent notable activity, partnerships, or product launches."),
-  similarityScore: z.number().describe("0-100 similarity score compared to the proposed startup idea."),
+
+  funding: z.string().optional().default("Not publicly available"),
+
+  latestRound: z.string().optional().default("Not publicly available"),
+
+  recentActivity: z.string().optional().default("Not publicly available"),
+
+  similarityScore: z.coerce.number().min(0).max(100),
 });
 
 const competitorSchema = z.object({
-  directCompetitors: z.array(competitorProfileSchema).describe("Main direct competitors"),
-  indirectCompetitors: z.array(competitorProfileSchema).describe("Indirect or alternative competitors"),
-  competitiveAdvantage: z.string().describe("Potential competitive advantage for this new startup"),
+  directCompetitors: z.array(competitorProfileSchema).default([]),
+
+  indirectCompetitors: z.array(competitorProfileSchema).default([]),
+
+  competitiveAdvantage: z.string().default("No competitive advantage identified"),
 });
 
 export async function competitorAgent(state: AgentState): Promise<Partial<AgentState>> {
@@ -79,7 +85,7 @@ rawSources.forEach((res) => {
     contextString += `
 Source: ${res.url}
 Title: ${res.title}
-Content: ${res.content.slice(0, 500)}
+Content: ${res.content.slice(0, 300)}
 
 `;
   }
@@ -139,7 +145,16 @@ similarityScore
 `;
 
   try {
-    const response = await modelWithStructure.invoke(prompt);
+    console.log(
+  `[Competitor Agent] Context Length: ${contextString.length}`
+);
+
+const response = await modelWithStructure.invoke(prompt);
+
+console.log(
+  "[Competitor Agent] Success:",
+  JSON.stringify(response).slice(0, 500)
+);
     
     return {
       competitors: response,
@@ -158,7 +173,28 @@ similarityScore
     } else {
       errorMessage = error.message || errorMessage;
     }
-    console.error(`[Groq] ${errorMessage}`);
-    return { error: `[Groq] ${errorMessage}`, status: 'error' };
+    console.error(
+  "[Competitor Agent FULL ERROR]",
+  JSON.stringify(error, null, 2)
+);
+
+console.error(
+  "[Competitor Agent MESSAGE]",
+  error?.message
+);
+
+console.error(
+  "[Competitor Agent STATUS]",
+  error?.status
+);
+    return {
+  competitors: {
+    directCompetitors: [],
+    indirectCompetitors: [],
+    competitiveAdvantage: "Unable to generate competitor analysis"
+  },
+  sources,
+  status: 'analyzing'
+};
   }
 }
