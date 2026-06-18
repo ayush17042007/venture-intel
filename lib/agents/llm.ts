@@ -11,7 +11,7 @@ export const researchLLM = new ChatGroq({
 
 export const competitorLLM = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY_1,
-  model: "llama-3.3-70b-versatile",
+  model: "openai/gpt-oss-120b",
   temperature: 0.2,
 });
 
@@ -23,6 +23,6 @@ export const analysisLLM = new ChatGroq({
 
 export const reportLLM = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY_2,
-  model: "llama-3.3-70b-versatile",
+  model: "openai/gpt-oss-120b",
   temperature: 0.2,
 });
