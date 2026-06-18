@@ -48,6 +48,9 @@ export async function competitorAgent(state: AgentState): Promise<Partial<AgentS
   "facebook.com",
   "twitter.com",
   "x.com",
+  "instagram.com",
+  "tiktok.com",
+  "pinterest.com"
 ];
 
 const blockedKeywords = [

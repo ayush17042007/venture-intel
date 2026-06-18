@@ -5,7 +5,7 @@ console.log("[Model] Multi-key setup");
 
 export const researchLLM = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY_1,
-  model: "llama-3.1-8b-instant",
+  model: "meta-llama/llama-4-scout-17b-16e-instruct",
   temperature: 0.2,
 });
 
