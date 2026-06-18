@@ -1,6 +1,14 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+function sanitizePdfText(text: string = ""): string {
+  return text
+    .replace(/[‐-‒–—]/g, "-") // convert fancy dashes
+    .replace(/[\u0000-\u001F]/g, "") // remove control chars
+    .replace(/\s+/g, " ") // normalize spaces
+    .trim();
+}
+
 export function generateInvestorMemo(startupIdea: string, data: any) {
   // Create a new PDF document (A4 portrait)
   const doc = new jsPDF('p', 'mm', 'a4');
@@ -45,7 +53,12 @@ export function generateInvestorMemo(startupIdea: string, data: any) {
     doc.setFont('helvetica', isBold ? 'bold' : 'normal');
     doc.setTextColor(71, 85, 105);
     
-    const lines = doc.splitTextToSize(text, pageWidth - margin * 2);
+    const cleanText = sanitizePdfText(text);
+
+    const lines = doc.splitTextToSize(
+    cleanText,
+    pageWidth - margin * 2
+  );
     
     // Check if we need a page break for the block of text
     if (yPos + (lines.length * 5) > pageHeight - margin) {
@@ -64,7 +77,12 @@ export function generateInvestorMemo(startupIdea: string, data: any) {
     
     items.forEach(item => {
       const bullet = "• ";
-      const lines = doc.splitTextToSize(item, pageWidth - margin * 2 - 5);
+      const cleanItem = sanitizePdfText(item);
+
+      const lines = doc.splitTextToSize(
+        cleanItem,
+        pageWidth - margin * 2 - 5
+      );
       
       if (yPos + (lines.length * 5) > pageHeight - margin) {
         addPageBreak();
@@ -139,7 +157,11 @@ export function generateInvestorMemo(startupIdea: string, data: any) {
     addSectionTitle("Competitive Landscape");
     
     if (data.competitors.competitiveAdvantage) {
-      addText(data.competitors.competitiveAdvantage);
+      addText(
+  sanitizePdfText(
+    data.competitors.competitiveAdvantage
+  )
+);
       yPos += 4;
     }
 
@@ -148,7 +170,7 @@ export function generateInvestorMemo(startupIdea: string, data: any) {
         c.companyName || 'Unknown',
         type,
         c.funding || 'Unknown',
-        `${c.similarityScore || 0}%`
+        `${Math.round((c.similarityScore || 0) * 100)}%`
       ]);
     };
 
@@ -237,7 +259,9 @@ export function generateInvestorMemo(startupIdea: string, data: any) {
     doc.setTextColor(100, 116, 139);
     
     data.sources.forEach((source: any, idx: number) => {
-      const sourceText = `[${idx + 1}] ${source.title || 'Untitled Source'} - ${source.url}`;
+      const sourceText = sanitizePdfText(
+  `[${idx + 1}] ${source.title || 'Untitled Source'} - ${source.url}`
+);
       const lines = doc.splitTextToSize(sourceText, pageWidth - margin * 2);
       
       if (yPos + (lines.length * 4) > pageHeight - margin) {
@@ -246,7 +270,7 @@ export function generateInvestorMemo(startupIdea: string, data: any) {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(100, 116, 139);
       }
-      
+      doc.setCharSpace(0);
       doc.text(lines, margin, yPos);
       yPos += lines.length * 4 + 2;
     });
